@@ -19,12 +19,13 @@ const dataBase = {};
 
 let setTimeOuts = [];
 
-const generateNewTimeout = (id) => {
+const generateNewTimeout = (id, socket) => {
   const timeOutId = dataBase[id]["timeoutArrayId"];
 
   clearTimeout(setTimeOuts[timeOutId]);
 
   let timeoutToClearSession = setTimeout(() => {
+    socket.emit(`session-clear-${id}`);
     delete dataBase[id];
     setTimeOuts = setTimeOuts.filter((_, index) => index !== timeOutId);
   }, TIME_TO_CLEAR_SESSION_IN_SECONDS * 1000);
@@ -43,7 +44,7 @@ io.on("connection", (socket) => {
     const { id } = clientData;
 
     if (dataBase[id]) {
-      generateNewTimeout(id);
+      generateNewTimeout(id, socket);
     }
   });
 
