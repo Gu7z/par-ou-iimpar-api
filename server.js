@@ -13,7 +13,7 @@ const port = process.env.PORT || 3005;
 const dataBase = {};
 
 io.on("connection", (socket) => {
-  socket.on("sendNick", ({ username, id }) => {
+  socket.on("canIEnter", ({ username, id }, callback) => {
     if (!dataBase[id]) {
       dataBase[id] = {};
       dataBase[id]["points"] = {};
@@ -22,6 +22,16 @@ io.on("connection", (socket) => {
       dataBase[id]["users"] = [];
     }
 
+    const users = dataBase[id]["users"];
+
+    if (users.length < 2 || users.includes(username)) {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+
+  socket.on("sendNick", ({ username, id }) => {
     dataBase[id]["points"][username] = 0;
     dataBase[id]["choice"][username] = "";
     dataBase[id]["response"][username] = null;
