@@ -53,6 +53,12 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("getChoice", ({ id }, callback) => {
+    const userChoice = dataBase[id]["choice"];
+
+    callback(userChoice);
+  });
+
   socket.on("setParOrImpar", (data) => {
     const { username, par, impar, id } = data;
 
