@@ -1,18 +1,52 @@
-require("dotenv").config();
 const app = require("express")();
 const http = require("http").Server(app);
-const io = require("socket.io")(http, {
+var middleware = require("socketio-wildcard")();
+require("dotenv").config();
+const corsConfig = {
   cors: {
     origin: process.env.FRONT_API,
     methods: ["GET", "POST"],
     credentials: true,
   },
-});
+};
+const io = require("socket.io")(http, corsConfig);
+
 const port = process.env.PORT || 3005;
+
+const TIME_TO_CLEAR_SESSION_IN_SECONDS = 120;
 
 const dataBase = {};
 
+let setTimeOuts = [];
+
+const generateNewTimeout = (id) => {
+  const timeOutId = dataBase[id]["timeoutArrayId"];
+
+  clearTimeout(setTimeOuts[timeOutId]);
+
+  let timeoutToClearSession = setTimeout(() => {
+    delete dataBase[id];
+    setTimeOuts = setTimeOuts.filter((_, index) => index !== timeOutId);
+  }, TIME_TO_CLEAR_SESSION_IN_SECONDS * 1000);
+
+  setTimeOuts[timeOutId] = timeoutToClearSession;
+};
+
+io.use(middleware);
+
 io.on("connection", (socket) => {
+  // Generate new timeout to every socket interaction based on id
+  socket.on("*", (socketData) => {
+    const {
+      data: [, clientData],
+    } = socketData;
+    const { id } = clientData;
+
+    if (dataBase[id]) {
+      generateNewTimeout(id);
+    }
+  });
+
   socket.on("canIEnter", ({ username, id }, callback) => {
     if (!dataBase[id]) {
       dataBase[id] = {};
@@ -20,6 +54,7 @@ io.on("connection", (socket) => {
       dataBase[id]["choice"] = {};
       dataBase[id]["response"] = {};
       dataBase[id]["users"] = [];
+      dataBase[id]["timeoutArrayId"] = setTimeOuts.push(null) - 1;
     }
 
     const users = dataBase[id]["users"];
